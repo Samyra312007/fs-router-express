@@ -21,7 +21,7 @@
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build && npm test"
+    "prepublishOnly": "npm run typecheck && npm run build && npm test"
   },
   "keywords": [
     "express",
@@ -32,11 +32,28 @@
     "auto-router",
     "api",
     "rest",
-    "typescript"
+    "typescript",
+    "zero-config"
   ],
   "license": "MIT",
+  "author": {
+    "name": "fs-router-express",
+    "url": "https://github.com/anomalyco/fs-router-express"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anomalyco/fs-router-express.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anomalyco/fs-router-express/issues"
+  },
+  "homepage": "https://github.com/anomalyco/fs-router-express#readme",
   "engines": {
     "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "dependencies": {},
   "peerDependencies": {
