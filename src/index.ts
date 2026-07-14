@@ -1,5 +1,8 @@
+export { createRouter, router, buildRouter, listRoutes } from './builder'
 export { walkDir } from './scanner'
 export { parseRoutes } from './parser'
+export { loadMiddlewareModules, getMiddlewareForRoute } from './middleware'
+export { loadErrorHandlerModules } from './error'
 export {
   mergePaths,
   removeExtension,
