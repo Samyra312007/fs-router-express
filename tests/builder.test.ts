@@ -154,3 +154,142 @@ describe('listRoutes', () => {
     expect(getUsers).toBeDefined()
   })
 })
+
+describe('buildRouter — config method restriction', () => {
+  let app: express.Express
+
+  beforeAll(async () => {
+    app = express()
+    await createRouter(app, { directory: path.join(fixturesDir, 'config') })
+  })
+
+  it('GET / is allowed by root config', async () => {
+    const res = await supertest(app).get('/')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ section: 'root' })
+  })
+
+  it('POST / is blocked by root config (GET only)', async () => {
+    const res = await supertest(app).post('/')
+    expect(res.status).toBe(404)
+  })
+
+  it('GET /users allowed by users config (GET, POST)', async () => {
+    const res = await supertest(app).get('/users')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ users: 'list' })
+  })
+
+  it('POST /users allowed by users config', async () => {
+    const res = await supertest(app).post('/users')
+    expect(res.status).toBe(201)
+    expect(res.body).toEqual({ created: true })
+  })
+
+  it('PUT /users blocked by users config (GET, POST only)', async () => {
+    const res = await supertest(app).put('/users')
+    expect(res.status).toBe(404)
+  })
+
+  it('GET /users/:id works (inherits users config)', async () => {
+    const res = await supertest(app).get('/users/42')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ id: '42' })
+  })
+})
+
+describe('buildRouter — 404 handling', () => {
+  let app: express.Express
+
+  beforeAll(async () => {
+    app = express()
+    await createRouter(app, { directory: path.join(fixturesDir, 'basic') })
+  })
+
+  it('returns 404 for unknown route', async () => {
+    const res = await supertest(app).get('/nonexistent')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 404 for unknown method', async () => {
+    const res = await supertest(app).patch('/users')
+    expect(res.status).toBe(404)
+  })
+})
+
+describe('buildRouter — combined routes with mixed types', () => {
+  let app: express.Express
+
+  beforeAll(async () => {
+    app = express()
+
+    const combinedDir = path.join(fixturesDir, 'combined')
+    const { mkdirSync, writeFileSync, existsSync, rmSync } = await import('node:fs')
+
+    if (existsSync(combinedDir)) {
+      rmSync(combinedDir, { recursive: true })
+    }
+    mkdirSync(combinedDir, { recursive: true })
+    mkdirSync(path.join(combinedDir, 'items'), { recursive: true })
+
+    writeFileSync(
+      path.join(combinedDir, 'index.ts'),
+      `export const GET = (_req: any, res: any) => res.json({ root: true })\n`,
+    )
+    writeFileSync(
+      path.join(combinedDir, 'items', 'index.ts'),
+      `export const GET = (_req: any, res: any) => res.json({ items: 'all' })\n` +
+      `export const POST = (_req: any, res: any) => res.status(201).json({ created: true })\n`,
+    )
+    writeFileSync(
+      path.join(combinedDir, 'items', '[id].ts'),
+      `export const GET = (_req: any, res: any) => res.json({ id: _req.params.id })\n` +
+      `export const DELETE = (_req: any, res: any) => res.status(204).send()\n`,
+    )
+    writeFileSync(
+      path.join(combinedDir, 'search.ts'),
+      `export const GET = (_req: any, res: any) => res.json({ search: true })\n`,
+    )
+
+    await createRouter(app, { directory: combinedDir })
+  })
+
+  it('GET / on combined app', async () => {
+    const res = await supertest(app).get('/')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ root: true })
+  })
+
+  it('GET /items returns list', async () => {
+    const res = await supertest(app).get('/items')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ items: 'all' })
+  })
+
+  it('POST /items creates item', async () => {
+    const res = await supertest(app).post('/items')
+    expect(res.status).toBe(201)
+  })
+
+  it('GET /items/:id returns param', async () => {
+    const res = await supertest(app).get('/items/7')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ id: '7' })
+  })
+
+  it('DELETE /items/:id returns 204', async () => {
+    const res = await supertest(app).delete('/items/9')
+    expect(res.status).toBe(204)
+  })
+
+  it('GET /search works', async () => {
+    const res = await supertest(app).get('/search')
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ search: true })
+  })
+
+  it('returns 404 for unknown route', async () => {
+    const res = await supertest(app).get('/unknown')
+    expect(res.status).toBe(404)
+  })
+})

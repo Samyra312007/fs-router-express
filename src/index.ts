@@ -3,6 +3,8 @@ export { walkDir } from './scanner'
 export { parseRoutes } from './parser'
 export { loadMiddlewareModules, getMiddlewareForRoute } from './middleware'
 export { loadErrorHandlerModules } from './error'
+export { loadConfigFiles, getEffectiveConfig } from './config'
+export type { DirectoryConfig } from './config'
 export {
   mergePaths,
   removeExtension,
